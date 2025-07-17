@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS - AI Assistant</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/icon.png">
+</head>
+<body>
+  <audio autoplay loop id="bg-music">
+    <source src="/static/jarvis_theme.mp3" type="audio/mpeg">
+    Your browser does not support the audio element.
+  </audio>
+
+  <div class="container">
+    <h1>J.A.R.V.I.S. - AI Assistant</h1>
+    <div class="chat-box" id="chat-box"></div>
+    <input type="text" id="user-input" placeholder="Speak or type here...">
+    <button id="send-button">Send</button>
+    <button id="voice-button">🎤</button>
+  </div>
+  <footer>
+    <p>Inspired by Iron Man | Created by You GILBERT</p>
+  </footer>
+
+  <script>
+    window.onload = function() {
+      const welcomeMessage = "Hello, I am your AI assistant. How can I help you today?";
+      const chatBox = document.getElementById('chat-box');
+      const botBubble = document.createElement('div');
+      botBubble.className = 'bot-message';
+      botBubble.textContent = welcomeMessage;
+      chatBox.appendChild(botBubble);
+      speakText(welcomeMessage);
+    };
+
+    document.getElementById('send-button').addEventListener('click', sendMessage);
+    document.getElementById('voice-button').addEventListener('click', startVoiceInput);
+
+    function speakText(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.pitch = 0.5;      // Deep voice
+      utterance.rate = 0.85;      // Slightly slow
+      utterance.volume = 1;
+      utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes('Google UK English Male')) || null;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('user-input');
+      const message = input.value.trim();
+      if (!message) return;
+
+      const chatBox = document.getElementById('chat-box');
+      const userBubble = document.createElement('div');
+      userBubble.className = 'user-message';
+      userBubble.textContent = message;
+      chatBox.appendChild(userBubble);
+      input.value = '';
+
+      fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const botBubble = document.createElement('div');
+        botBubble.className = 'bot-message';
+        botBubble.textContent = data.response;
+        chatBox.appendChild(botBubble);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        speakText(data.response);
+      })
+      .catch(err => {
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'error-message';
+        errorBubble.textContent = 'Error: Unable to connect to server.';
+        chatBox.appendChild(errorBubble);
+      });
+    }
+
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert('Speech recognition not supported in this browser.');
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.start();
+
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('user-input').value = transcript;
+        sendMessage();
+      };
+
+      recognition.onerror = function(event) {
+        alert('Voice input error: ' + event.error);
+      };
+    }
+  </script>
+</body>
+</html>
